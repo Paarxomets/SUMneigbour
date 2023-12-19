@@ -1,0 +1,170 @@
+def update_reaction(user_id, reaction_type):
+    with open('likes.json', 'r', encoding='utf-8') as file:
+        likes_data = json.load(file)
+
+    # Проверяем, существует ли запись о пользователе
+    user_reactions = likes_data.get(reaction_type, {})
+    if user_id not in user_reactions:
+        user_reactions[user_id] = []
+
+    # Добавляем идентификатор пользователя в список дизлайков
+    user_reactions[user_id].append(user_id)
+    likes_data[reaction_type] = user_reactions
+
+    # Сохраняем данные в файл
+    with open('likes.json', 'w', encoding='utf-8') as file:
+        json.dump(likes_data, file, ensure_ascii=False, indent=4)
+
+
+def random_questionnaire(message):
+    # Загружаем данные пользователя из users.json
+    with open('users.json', 'r', encoding='utf-8') as file:
+        data = json.load(file)
+
+    # Получаем случайный ID пользователя
+    random_user_id = choice(data['users'])['id']
+
+    # Ищем анкету пользователя по ID
+    user_data = None
+    for user in data['users']:
+        if user['id'] == random_user_id:
+            user_data = user
+            break
+
+    if user_data:
+        markup = telebot.types.InlineKeyboardMarkup(row_width=2)
+        but1 = telebot.types.InlineKeyboardButton(text='❤️', callback_data='b1')
+        but2 = telebot.types.InlineKeyboardButton(text='👎', callback_data='b2')
+        but3 = telebot.types.InlineKeyboardButton(text='Меню', callback_data='b3')
+        markup.add(but1, but2, but3)
+
+        # Загружаем и отправляем фотографию
+        image_path = user_data["Фотография"]  # Путь к фотографии
+        with open(image_path, 'rb') as photo:
+            # Отправляем фотографию в сообщении
+            bot.send_photo(message.chat.id, photo, caption=f'''
+            Имя: {user_data["Имя"]}
+            Возраст: {user_data["Возраст"]}
+            Пол: {user_data["Пол"]}
+            Институт: {user_data["Институт"]}
+            О себе: {user_data["О себе"]}
+            ''', reply_markup=markup)
+
+    else:
+        # Если анкета пользователя не найдена
+        bot.send_message(message.chat.id, 'Анкета не найдена.')
+
+
+
+
+
+bot.reply_to(message, 'Регистрация успешно завершена!')
+        questionnaire(message)
+    else:
+        bot.reply_to(message, 'Пожалуйста, отправьте фотографию')
+
+
+def remove_user(message):
+    with open('users.json', 'r', encoding='utf-8') as file:
+        data = json.load(file)
+    user_id = message.from_user.id
+    found_user = None
+    for user in data['users']:
+        if user['id'] == user_id:
+            found_user = user
+            break
+    if found_user:
+        data['users'].remove(found_user)
+    with open('users.json', 'w') as file:
+        json.dump(data, file, indent=4)
+
+
+def questionnaire(message):
+    # Загружаем данные пользователя из users.json
+    with open('users.json', 'r', encoding='utf-8') as file:
+        data = json.load(file)
+
+    # Ищем анкету пользователя по ID
+    user_id = message.from_user.id
+    user_data = None
+    for user in data['users']:
+        if user['id'] == user_id:
+            user_data = user
+            break
+
+    if user_data:
+        markup = telebot.types.InlineKeyboardMarkup(row_width=1)
+        but1 = telebot.types.InlineKeyboardButton(text='Просмотр Анкет', callback_data='one')
+        but4 = telebot.types.InlineKeyboardButton(text='настроить поиск', callback_data='but4')
+        but5 = telebot.types.InlineKeyboardButton(text='настройка профиля', callback_data='but5')
+        markup.add(but1, but4, but5)
+
+        # Загружаем и отправляем фотографию
+        image_path = user_data["Фотография"]  # Путь к фотографии
+        with open(image_path, 'rb') as photo:
+            # Отправляем фотографию в сообщении
+            bot.send_photo(message.chat.id, photo, caption=f'''
+            Ваша анкета:
+            Имя: {user_data["Имя"]}
+            Возраст: {user_data["Возраст"]}
+            Пол: {user_data["Пол"]}
+            Институт: {user_data["Институт"]}
+            О себе: {user_data["О себе"]}
+            ''', reply_markup=markup)
+
+    else:
+        # Если анкета пользователя не найдена
+        bot.send_message(message.chat.id, 'Анкета не найдена.')
+
+
+def options_questionnaire(message):
+    keyboard = telebot.types.InlineKeyboardMarkup(row_width=1)
+    b1 = telebot.types.InlineKeyboardButton(text='Поменять фотографию', callback_data='1')
+    b3 = telebot.types.InlineKeyboardButton(text='Заново пройти регистрацию', callback_data='3')
+    keyboard.add(b1, b3)
+    bot.send_message(message.chat.id, text="Выберете что хотите изменить", reply_markup=keyboard)
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def handle(call):
+    if call.data == 'butt1':
+        bot.send_message(call.message.chat.id, text='Отправте фотографию')
+    elif call.data == 'butt3':
+        bot.send_message(call.message.chat.id, text="А все уже")
+    elif call.data == 'butt4':
+        return options_questionnaire(call.message)
+    elif call.data == '1':
+        bot.send_message(call.message.chat.id, text='Отправте фотографию!')
+    elif call.data == '2':
+        bot.send_message(call.message.chat.id, text='Пока в разработке')
+    elif call.data == 'one':
+        bot.send_message(call.message.chat.id, text='Отправте фотографию!')
+    else:
+        bot.send_message(call.message.chat.id, text="ERROR HANDLE CALLDATA")
+
+
+@bot.message_handler(func=lambda message: True)
+def handle_question(message):
+    if message.text:
+        if "Регистрация" in message.text:
+            registration(message)
+        else:
+            bot.send_message(message.chat.id, text="Ошибка options_questionnaire")
+    else:
+        bot.send_message(message.chat.id, text='Ошибка в блоке обрабочика кнопок')
+
+
+def random_questionnaire(message):
+    # Загружаем данные пользователя из users.json
+    with open('users.json', 'r', encoding='utf-8') as file:
+        data = json.load(file)
+
+    # Получаем случайный ID пользователя
+    random_user_id = choice(data['users'])['id']
+
+    # Ищем анкету пользователя по ID
+    user_data = None
+    for user in data['users']:
+        if user['id'] == random_user_id:
+            user_data = user
+            break
